@@ -1,25 +1,15 @@
+import cors from '@fastify/cors'
 import fastify from 'fastify'
-import { PrismaClient } from '@prisma/client'
 
-const app = fastify()
-const prisma = new PrismaClient()
+import Router from './router'
 
 const opts: any = { port: process.env.port || 3333 }
+const app = fastify()
 
-const olaMundo = () => {
-  return 'Ola mundo!'
-}
+app.register(cors, {
+  origin: ['http://localhost:3000'],
+})
 
-const getUsuarios = async () => {
-  return await prisma.user.findMany()
-}
+app.register(Router)
 
-app.get('/usuarios', getUsuarios)
-app.get('/ola-mundo', olaMundo)
-
-app.get('/hello-world', olaMundo)
-app.get('/世界', olaMundo)
-
-app
-  .listen(opts)
-  .then(() => console.log('Servidor HTTP executando na opts=', opts))
+app.listen(opts).then((addr) => console.log('Servidor: Executando em', addr))
