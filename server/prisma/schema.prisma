@@ -11,9 +11,12 @@ datasource db {
 }
 
 model User {
-  id     String   @id @default(uuid())
-  name   String
-  Memory Memory[]
+  id        String   @id @default(uuid())
+  idGithub  Int      @unique
+  name      String
+  login     String
+  avatarUrl String
+  Memory    Memory[]
 }
 
 model Memory {
