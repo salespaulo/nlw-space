@@ -2,7 +2,14 @@ import { z } from 'zod'
 
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
+import { randomUUID } from 'crypto'
+import { createWriteStream } from 'fs'
+import { extname, resolve } from 'path'
+import { pipeline } from 'stream'
+import { promisify } from 'util'
 import { prisma } from '../lib/prisma'
+
+const pump = promisify(pipeline)
 
 export const validarId = z.object({
   id: z.string().uuid(),
@@ -29,7 +36,7 @@ export const consultarPorId = async (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
-  await req.jwtVerify()
+  await request.jwtVerify()
   const { id } = validarId.parse(request.params)
 
   const memory = await prisma.memory.findUniqueOrThrow({
@@ -44,7 +51,7 @@ export const consultarPorId = async (
 }
 
 export const criar = async (request: FastifyRequest) => {
-  await req.jwtVerify()
+  await request.jwtVerify()
   const { content, coverUrl, isPublic } = validarMemoria.parse(request.params)
 
   return await prisma.memory.create({
@@ -86,7 +93,7 @@ export const atualizar = async (
 }
 
 export const excluir = async (request: FastifyRequest, reply: FastifyReply) => {
-  await req.jwtVerify()
+  await request.jwtVerify()
   const { id } = validarId.parse(request.params)
 
   const memory = await prisma.memory.findFirstOrThrow({
@@ -100,4 +107,36 @@ export const excluir = async (request: FastifyRequest, reply: FastifyReply) => {
   }
 
   return reply.status(401).send('Unauthorized')
+}
+
+export const upload = async (request: FastifyRequest, reply: FastifyReply) => {
+  const upload = await request.file({
+    limits: {
+      fileSize: 5_242_880, // 5Mb
+    },
+  })
+
+  if (!upload) {
+    return reply.status(400).send('Upload invalid')
+  }
+
+  const fileRegex = /^(image|video)\/[a-zA-Z]+/
+  const fileIsValid = fileRegex.test
+
+  if (!fileIsValid) {
+    return reply.status(400).send('Upload invalid')
+  }
+
+  const fileId = randomUUID()
+  const fileExt = extname(upload.filename)
+  const fileName = fileId.concat(fileExt)
+  const fileAbsolute = resolve(__dirname, '..', '..', 'uploads', fileName)
+  const writeStream = createWriteStream(fileAbsolute)
+
+  await pump(upload.file, writeStream)
+
+  const fileHttp = request.protocol.concat('://').concat(request.hostname)
+  const fileUrl = new URL(`/uploads/${fileName}`, fileHttp).toString()
+
+  return reply.status(200).send(fileUrl)
 }

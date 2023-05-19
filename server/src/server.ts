@@ -2,6 +2,8 @@ import 'dotenv/config'
 
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
+import multipart from '@fastify/multipart'
+import files from '@fastify/static'
 import fastify from 'fastify'
 
 import Router from './router'
@@ -15,6 +17,12 @@ app.register(cors, {
 
 app.register(jwt, {
   secret: process.env.SECRET || 'LmJq3Pf5tmWd66Em7',
+})
+
+app.register(multipart)
+app.register(files, {
+  root: '/uploads',
+  prefix: '/uploads',
 })
 
 app.register(Router)

@@ -9,6 +9,7 @@ import {
 } from './controller'
 
 const MemoriaRouter = (app: FastifyInstance) => {
+  app.post('/upload', updload)
   app.get('/memorias', consultar)
   app.get('/memorias/:id', consultarPorId)
   app.post('/memorias', criar)

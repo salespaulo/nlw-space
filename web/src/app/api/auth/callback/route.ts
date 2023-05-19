@@ -10,7 +10,8 @@ export const GET = async (req: NextRequest) => {
   })
 
   const { token } = authResp.data
-  const redirectUrl = new URL('/', req.url)
+  const redirectTo = req.cookies.get('redirectTo')?.value
+  const redirectUrl = redirectTo ?? new URL('/', req.url)
   const maxAge = 60 * 60 * 24 * 30
   const path = '/'
 
