@@ -6,6 +6,7 @@ import multipart from '@fastify/multipart'
 import files from '@fastify/static'
 import fastify from 'fastify'
 
+import { resolve } from 'path'
 import Router from './router'
 
 const opts: any = { host: '0.0.0.0', port: process.env.port || 3333 }
@@ -21,7 +22,7 @@ app.register(jwt, {
 
 app.register(multipart)
 app.register(files, {
-  root: '/uploads',
+  root: resolve(__dirname, '..', 'uploads'),
   prefix: '/uploads',
 })
 

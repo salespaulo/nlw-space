@@ -22,14 +22,25 @@ export const validarMemoria = z.object({
 })
 
 export const consultar = async (request: FastifyRequest) => {
-  return await prisma.memory.findMany({
+  await request.jwtVerify()
+
+  const list = await prisma.memory.findMany({
     where: {
-      id: request.user.sub,
+      userId: request.user.sub,
     },
     orderBy: {
-      createdAt: 'asc',
+      createdAt: 'desc',
     },
   })
+
+  const result = list.map((m) => ({
+    id: m.id,
+    coverUrl: m.coverUrl,
+    excerpt: m.content.substring(0, 115).concat('...'),
+    createdAt: m.createdAt,
+  }))
+
+  return result
 }
 
 export const consultarPorId = async (
@@ -52,7 +63,7 @@ export const consultarPorId = async (
 
 export const criar = async (request: FastifyRequest) => {
   await request.jwtVerify()
-  const { content, coverUrl, isPublic } = validarMemoria.parse(request.params)
+  const { content, coverUrl, isPublic } = validarMemoria.parse(request.body)
 
   return await prisma.memory.create({
     data: {
@@ -68,7 +79,7 @@ export const atualizar = async (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
-  await req.jwtVerify()
+  await request.jwtVerify()
   const { id } = validarId.parse(request.params)
   const { content, coverUrl, isPublic } = validarMemoria.parse(request.params)
 
@@ -120,23 +131,28 @@ export const upload = async (request: FastifyRequest, reply: FastifyReply) => {
     return reply.status(400).send('Upload invalid')
   }
 
-  const fileRegex = /^(image|video)\/[a-zA-Z]+/
-  const fileIsValid = fileRegex.test
+  try {
+    const fileRegex = /^(image|video)\/[a-zA-Z]+/
+    const fileIsValid = fileRegex.test
 
-  if (!fileIsValid) {
-    return reply.status(400).send('Upload invalid')
+    if (!fileIsValid) {
+      return reply.status(400).send('Upload invalid')
+    }
+
+    const fileId = randomUUID()
+    const fileExt = extname(upload.filename)
+    const fileName = fileId.concat(fileExt)
+    const fileAbsolute = resolve(__dirname, '..', '..', 'uploads', fileName)
+    const writeStream = createWriteStream(fileAbsolute)
+
+    await pump(upload.file, writeStream)
+
+    const fileHttp = request.protocol.concat('://').concat(request.hostname)
+    const fileUrl = new URL(`/uploads/${fileName}`, fileHttp).toString()
+
+    return reply.status(200).send({ fileUrl })
+  } catch (e) {
+    console.error(e)
+    return reply.status(500).send(e)
   }
-
-  const fileId = randomUUID()
-  const fileExt = extname(upload.filename)
-  const fileName = fileId.concat(fileExt)
-  const fileAbsolute = resolve(__dirname, '..', '..', 'uploads', fileName)
-  const writeStream = createWriteStream(fileAbsolute)
-
-  await pump(upload.file, writeStream)
-
-  const fileHttp = request.protocol.concat('://').concat(request.hostname)
-  const fileUrl = new URL(`/uploads/${fileName}`, fileHttp).toString()
-
-  return reply.status(200).send(fileUrl)
 }

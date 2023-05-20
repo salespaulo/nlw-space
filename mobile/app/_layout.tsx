@@ -52,6 +52,7 @@ export default function Layout() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
           contentStyle: {
             backgroundColor: 'transparent',
           },
