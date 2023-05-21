@@ -36,7 +36,7 @@ export default function App() {
       const res = await api.post('/usuarios/oauth/m', { code })
       const { token } = res.data
       SecureStore.setItemAsync('token', token)
-      router.push('/new')
+      router.push('/memories')
     } catch (e) {
       console.error(e)
       alert('Unauthorized')
